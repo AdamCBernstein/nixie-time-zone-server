@@ -13,8 +13,8 @@ A full list of supported time zones is available at: https://en.wikipedia.org/wi
 
 Gets the local time right now for the given TZ style input area and city n the format "yyyymmdd HHMMSS"
 
-curl http://localhost:8081/Europe/Berlin
-2021,12,06,03,31,44
+curl http://localhost:8081/Europe/Berlin  
+2021,12,06,03,31,44  
 
-curl http://localhost:8081/America/Los_Angeles
-2021,12,05,18,31,44
+curl http://localhost:8081/America/Los_Angeles  
+2021,12,05,18,31,44  
