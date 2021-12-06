@@ -2,18 +2,27 @@ package main
 
 import (
 	"fmt"
-	"os"
+	"html"
+	"log"
+	"net/http"
 	"time"
 )
 
-// REST query made
-// curl http://localhost:3000/GetTime/Europe/Berlin
-// Time response:YYYY,MM,DD,HH,MM,SS
-// 2016,04,18,15,56,08
-
 const shortForm = "2006,01,02,15,04,05"
 
-func timeForTZ(tz string) (string, error) {
+func startRestTzServer() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if timeStr, err := timeForTz(html.EscapeString(r.URL.Path)[1:]); err != nil {
+			fmt.Fprintf(w, "No such time zone %q", html.EscapeString(r.URL.Path))
+		} else {
+			fmt.Fprintf(w, "%s", timeStr)
+		}
+	})
+
+	log.Fatal(http.ListenAndServe(":8081", nil))
+}
+
+func timeForTz(tz string) (string, error) {
 	loc, err := time.LoadLocation(tz)
 	if err != nil {
 		return "", err
@@ -32,16 +41,5 @@ func timeForTZ(tz string) (string, error) {
 }
 
 func main() {
-	timeZone := "Europe/Berlin"
-	if len(os.Args) > 1 {
-		timeZone = os.Args[1]
-	}
-
-	//loc, err := time.LoadLocation("Europe/Berlin")
-	timeVal, err := timeForTZ(timeZone)
-	if err != nil {
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(timeVal)
+	startRestTzServer()
 }
