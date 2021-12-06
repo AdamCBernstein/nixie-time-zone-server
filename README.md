@@ -9,7 +9,7 @@ A full list of supported time zones is available at: https://en.wikipedia.org/wi
 
 #API:
 
-##GET /getTime/area/location ##GET /area/location/city
+##GET /area/location ##GET /area/location/city
 
 Gets the local time right now for the given TZ style input area and city n the format "yyyymmdd HHMMSS"
 
