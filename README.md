@@ -1,0 +1,18 @@
+# nixie-time-zone-server
+Go implementation of isparkes/time-zone-server
+
+This is a Go server which gives back the local time anywhere in the world, given a Unix Style location as input, e.g. 'Europe/Zurich', or 'America/Los_Angeles'.
+
+This is a 100% project, and has no external dependency on a web server. This program IS a very tiny web server
+
+A full list of supported time zones is available at: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+
+#API:
+
+##GET /getTime/area/location ##GET /area/location/city
+
+Gets the local time right now for the given TZ style input area and city n the format "yyyymmdd HHMMSS"
+
+curl http://localhost:8081/Europe/Berlin
+2016,04,18,15,56,08
+curl http://localhost:8081/America/Los_Angeles
