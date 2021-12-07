@@ -1,3 +1,3 @@
-module tzserver-zone
+module nixie-timeserver
 
 go 1.17

@@ -5,13 +5,15 @@ import (
 	"html"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
 const (
+	restGetTime     = "/getTime/"
 	shortTimeFormat = "2006,01,02,15,04,05"
 	maxClients      = 10
-	httpPort        = ":8081"
+	httpPort        = ":8082"
 )
 
 func startRestTzServer() {
@@ -21,10 +23,14 @@ func startRestTzServer() {
 		httpMax <- struct{}{}
 		defer func() { <-httpMax }()
 
-		if timeStr, err := timeForTz(html.EscapeString(r.URL.Path)[1:]); err != nil {
-			fmt.Fprintf(w, "No such time zone %q", html.EscapeString(r.URL.Path))
+		if httpGetUrl := html.EscapeString(r.URL.Path); len(httpGetUrl) == 0 {
+			fmt.Fprintf(w, "Bad URL format: %s\n", httpGetUrl)
+		} else if offset := strings.Index(httpGetUrl, restGetTime); offset < 0 {
+			fmt.Fprintf(w, "Bad REST URI: %s", httpGetUrl)
+		} else if timeForURL, err := timeForTz(httpGetUrl[offset+len(restGetTime):]); err != nil {
+			fmt.Fprintf(w, "%q No such time zone %v", httpGetUrl[offset+len(restGetTime):], err)
 		} else {
-			fmt.Fprintf(w, "%s", timeStr)
+			fmt.Fprintf(w, "%s", timeForURL)
 		}
 	})
 	log.Fatal(http.ListenAndServe(httpPort, nil))
