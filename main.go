@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"html"
 	"log"
 	"net/http"
 	"strings"
@@ -10,50 +9,107 @@ import (
 )
 
 const (
-	restGetTime     = "/getTime/"
-	shortTimeFormat = "2006,01,02,15,04,05"
-	maxClients      = 10
-	httpPort        = ":8082"
+	restGetTime       = "/GetTime/"
+	restGetTimeRaw    = "/GetTimeRaw/"
+	restGetTimeOffset = "/GetTimeOffset/"
+	restGetTimeZone   = "/GetTimeZone/"
+	shortTimeFormat   = "2006,01,02,15,04,05"
+	maxClients        = 10
+	httpPort          = ":3000"
 )
 
-func startRestTzServer() {
-	httpMax := make(chan struct{}, maxClients)
+var (
+	httpMax = make(chan struct{}, maxClients)
+)
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		httpMax <- struct{}{}
-		defer func() { <-httpMax }()
+func getTime(w http.ResponseWriter, r *http.Request) {
+	httpMax <- struct{}{}
+	defer func() { <-httpMax }()
 
-		if httpGetUrl := html.EscapeString(r.URL.Path); len(httpGetUrl) == 0 {
-			fmt.Fprintf(w, "Bad URL format: %s\n", httpGetUrl)
-		} else if offset := strings.Index(httpGetUrl, restGetTime); offset < 0 {
-			fmt.Fprintf(w, "Bad REST URI: %s", httpGetUrl)
-		} else if timeForURL, err := timeForTz(httpGetUrl[offset+len(restGetTime):]); err != nil {
-			fmt.Fprintf(w, "%q No such time zone %v", httpGetUrl[offset+len(restGetTime):], err)
-		} else {
-			fmt.Fprintf(w, "%s", timeForURL)
-		}
-	})
-	log.Fatal(http.ListenAndServe(httpPort, nil))
+	path := r.URL.Path
+	if !strings.HasPrefix(path, restGetTime) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Bad URL format: %s\n", path)
+		return
+	}
+
+	locationTz, err := time.LoadLocation(path[len(restGetTime):])
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Invlid timezone specified: %s\n", path)
+		return
+	}
+
+	fmt.Fprintln(w, time.Now().In(locationTz).Format(shortTimeFormat))
 }
 
-func timeForTz(tz string) (string, error) {
-	locationTz, err := time.LoadLocation(tz)
-	if err != nil {
-		return "", err
+func getTimeRaw(w http.ResponseWriter, r *http.Request) {
+	httpMax <- struct{}{}
+	defer func() { <-httpMax }()
+
+	path := r.URL.Path
+	if !strings.HasPrefix(path, restGetTimeRaw) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Bad URL format: %s\n", path)
+		return
 	}
 
-	n := time.Now().In(locationTz)
-	nowTime := fmt.Sprintf("%4d,%02d,%02d,%02d,%02d,%02d",
-		n.Year(), n.Month(), n.Day(), n.Hour(), n.Minute(), n.Second())
-	if tzTime, err := time.ParseInLocation(shortTimeFormat, nowTime, locationTz); err != nil {
-		fmt.Println(fmt.Errorf("%v", err))
-		return "", err
-	} else {
-		timeFmt := tzTime.Format(shortTimeFormat)
-		return timeFmt, nil
+	locationTz, err := time.LoadLocation(path[len(restGetTimeRaw):])
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Invlid timezone specified: %s\n", path)
+		return
 	}
+	fmt.Fprintln(w, time.Now().In(locationTz).Format(time.RFC1123Z))
+}
+
+func getTimeOffset(w http.ResponseWriter, r *http.Request) {
+	httpMax <- struct{}{}
+	defer func() { <-httpMax }()
+
+	path := r.URL.Path
+	if !strings.HasPrefix(path, restGetTimeOffset) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Bad URL format: %s\n", path)
+		return
+	}
+
+	locationTz, err := time.LoadLocation(path[len(restGetTimeOffset):])
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Invlid timezone specified: %s\n", path)
+		return
+	}
+
+	fmt.Fprintln(w, "GMT"+time.Now().In(locationTz).Format("-0700"))
+}
+
+func getTimeZone(w http.ResponseWriter, r *http.Request) {
+	httpMax <- struct{}{}
+	defer func() { <-httpMax }()
+
+	path := r.URL.Path
+	if !strings.HasPrefix(path, restGetTimeZone) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Bad URL format: %s\n", path[len(restGetTimeZone):])
+		return
+	}
+
+	locationTz, err := time.LoadLocation(path[len(restGetTimeZone):])
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Invlid timezone specified: %s\n", path)
+		return
+	}
+
+	zoneForUrl, _ := time.Now().In(locationTz).Zone()
+	fmt.Fprintln(w, zoneForUrl)
 }
 
 func main() {
-	startRestTzServer()
+	http.HandleFunc(restGetTime, getTime)
+	http.HandleFunc(restGetTimeRaw, getTimeRaw)
+	http.HandleFunc(restGetTimeOffset, getTimeOffset)
+	http.HandleFunc(restGetTimeZone, getTimeZone)
+	log.Fatal(http.ListenAndServe(httpPort, nil))
 }
